@@ -7,11 +7,11 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bluetooth, BluetoothConnected, BluetoothOff } from "lucide-react";
+import { Usb, Plug, PlugZap } from "lucide-react";
 import { useState, useEffect } from "react";
-import { ArduinoBluetooth } from "@/lib/bluetooth";
+import { ArduinoSerial } from "@/lib/serial";
 
-interface BluetoothConnectionProps {
+interface SerialConnectionProps {
   onDataReceived?: (data: {
     moisture: number;
     temperature: number;
@@ -20,34 +20,34 @@ interface BluetoothConnectionProps {
   }) => void;
 }
 
-export function BluetoothConnection({
+export function SerialConnection({
   onDataReceived,
-}: BluetoothConnectionProps) {
+}: SerialConnectionProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [bluetooth, setBluetooth] = useState<ArduinoBluetooth | null>(null);
+  const [serial, setSerial] = useState<ArduinoSerial | null>(null);
 
   useEffect(() => {
-    const bt = new ArduinoBluetooth();
+    const ser = new ArduinoSerial();
     if (onDataReceived) {
-      bt.setDataHandler(onDataReceived);
+      ser.setDataHandler(onDataReceived);
     }
-    setBluetooth(bt);
+    setSerial(ser);
 
     return () => {
-      bt.disconnect();
+      ser.disconnect();
     };
   }, [onDataReceived]);
 
   const handleConnect = async () => {
-    if (!bluetooth) return;
+    if (!serial) return;
 
     setIsConnecting(true);
     setError(null);
 
     try {
-      await bluetooth.connect();
+      await serial.connect();
       setIsConnected(true);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "연결 실패";
@@ -59,10 +59,10 @@ export function BluetoothConnection({
   };
 
   const handleDisconnect = async () => {
-    if (!bluetooth) return;
+    if (!serial) return;
 
     try {
-      await bluetooth.disconnect();
+      await serial.disconnect();
       setIsConnected(false);
       setError(null);
     } catch (err) {
@@ -70,19 +70,19 @@ export function BluetoothConnection({
     }
   };
 
-  // 브라우저 블루투스 지원 확인
-  const isBluetoothSupported = "bluetooth" in navigator;
+  // 브라우저 시리얼 지원 확인
+  const isSerialSupported = "serial" in navigator;
 
-  if (!isBluetoothSupported) {
+  if (!isSerialSupported) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BluetoothOff className="h-5 w-5" />
-            블루투스 연결
+            <Plug className="h-5 w-5" />
+            시리얼 연결
           </CardTitle>
           <CardDescription>
-            이 브라우저는 Web Bluetooth API를 지원하지 않습니다.
+            이 브라우저는 Web Serial API를 지원하지 않습니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -96,16 +96,18 @@ export function BluetoothConnection({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {isConnected ? (
-            <BluetoothConnected className="h-5 w-5 text-green-500" />
-          ) : (
-            <Bluetooth className="h-5 w-5" />
-          )}
-          아두이노 블루투스 연결
-        </CardTitle>
-        <CardDescription>아두이노 센서와 블루투스로 연결합니다</CardDescription>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {isConnected ? (
+              <PlugZap className="h-5 w-5 text-green-500" />
+            ) : (
+              <Usb className="h-5 w-5" />
+            )}
+            아두이노 시리얼 연결
+          </CardTitle>
+        <CardDescription>
+          USB 케이블로 연결된 아두이노와 시리얼 통신합니다
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
@@ -120,12 +122,12 @@ export function BluetoothConnection({
           </div>
           {isConnected ? (
             <Button onClick={handleDisconnect} variant="destructive">
-              <BluetoothOff className="h-4 w-4 mr-2" />
+              <Plug className="h-4 w-4 mr-2" />
               연결 해제
             </Button>
           ) : (
             <Button onClick={handleConnect} disabled={isConnecting}>
-              <Bluetooth className="h-4 w-4 mr-2" />
+              <Usb className="h-4 w-4 mr-2" />
               {isConnecting ? "연결 중..." : "연결하기"}
             </Button>
           )}
@@ -144,7 +146,17 @@ export function BluetoothConnection({
             </p>
           </div>
         )}
+        {!isConnected && (
+          <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-sm text-blue-900 dark:text-blue-100">
+              💡 USB 케이블로 아두이노를 컴퓨터에 연결한 후 연결하기 버튼을 눌러주세요.
+              <br />
+              보드레이트: 38400
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
+

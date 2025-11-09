@@ -6,6 +6,7 @@ import { WeatherCard } from "@/components/dashboard/weather-card";
 import { AlertCard } from "@/components/dashboard/alert-card";
 import { CameraView } from "@/components/dashboard/camera-view";
 import { BluetoothConnection } from "@/components/dashboard/bluetooth-connection";
+import { SerialConnection } from "@/components/dashboard/serial-connection";
 import {
   sendCombinedData,
   sendCameraData,
@@ -23,15 +24,26 @@ function Dashboard() {
 
   // 센서 데이터 수신 핸들러
   const handleSensorData = useCallback(
-    (data: { temperature: number; humidity: number; illuminance: number }) => {
+    (data: {
+      moisture: number;
+      temperature: number;
+      humidity: number;
+      illuminance: number;
+    }) => {
+      console.log("[Dashboard] 📥 센서 데이터 수신:", data);
+
       const sensorData: SensorData = {
+        moisture: data.moisture,
         temperature: data.temperature,
         humidity: data.humidity,
         illuminance: data.illuminance,
         timestamp: new Date().toISOString(),
       };
+
+      console.log("[Dashboard] ✅ SensorData 설정:", sensorData);
       setSensorData(sensorData);
       setLastUpdate(new Date());
+      console.log("[Dashboard] ✅ 상태 업데이트 완료");
     },
     []
   );
@@ -46,6 +58,7 @@ function Dashboard() {
         return {
           currentStatus: {
             sensors: {
+              moisture: 50,
               temperature: 22.5,
               humidity: 65,
               illuminance: 800,
@@ -63,6 +76,12 @@ function Dashboard() {
             },
           },
           recommendations: {
+            moisture: {
+              current: 50,
+              optimal: { min: 30, max: 70 },
+              action: "현재 토양 수분이 적정 범위입니다.",
+              status: "good" as const,
+            },
             temperature: {
               current: 22.5,
               optimal: { min: 18, max: 25 },
@@ -158,8 +177,11 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* 블루투스 연결 */}
-        <BluetoothConnection onDataReceived={handleSensorData} />
+        {/* 연결 옵션 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <BluetoothConnection onDataReceived={handleSensorData} />
+          <SerialConnection onDataReceived={handleSensorData} />
+        </div>
 
         {/* 센서 데이터 카드 */}
         <SensorCard data={dashboardData.recommendations} />

@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Thermometer, Droplets, Sun } from "lucide-react";
+import { Thermometer, Droplets, Sun, Sprout } from "lucide-react";
 import type { DashboardResponse } from "@/lib/api";
 
 interface SensorCardProps {
@@ -42,7 +42,46 @@ export function SensorCard({ data }: SensorCardProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 토양 수분 카드 */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">토양 수분</CardTitle>
+          <Sprout className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {data.moisture.current.toFixed(0)}%
+          </div>
+          <CardDescription className="mt-2">
+            최적 범위: {data.moisture.optimal.min}% ~{" "}
+            {data.moisture.optimal.max}%
+          </CardDescription>
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span>상태</span>
+              <Badge
+                variant="outline"
+                className={`${getStatusColor(data.moisture.status)} text-white border-0`}
+              >
+                {getStatusText(data.moisture.status)}
+              </Badge>
+            </div>
+            <Progress
+              value={
+                ((data.moisture.current - data.moisture.optimal.min) /
+                  (data.moisture.optimal.max - data.moisture.optimal.min)) *
+                100
+              }
+              className="h-2"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              {data.moisture.action}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* 온도 카드 */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -130,11 +169,13 @@ export function SensorCard({ data }: SensorCardProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {data.illuminance.current.toFixed(0)} lux
+            {data.illuminance.current.toFixed(0)}
           </div>
           <CardDescription className="mt-2">
-            최적 범위: {data.illuminance.optimal.min} lux ~{" "}
-            {data.illuminance.optimal.max} lux
+            최적 범위: {data.illuminance.optimal.min} ~{" "}
+            {data.illuminance.optimal.max}
+            <br />
+            <span className="text-xs">(낮을수록 밝음, 0-1023)</span>
           </CardDescription>
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between text-xs">

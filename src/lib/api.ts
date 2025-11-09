@@ -2,9 +2,10 @@ import axios from "axios";
 
 // API 타입 정의
 export interface SensorData {
+  moisture: number; // 토양 수분 (0-100%)
   temperature: number; // 온도 (°C)
   humidity: number; // 습도 (%)
-  illuminance: number; // 조도 (lux)
+  illuminance: number; // 조도 (0-1023, 낮을수록 밝음)
   timestamp: string;
 }
 
@@ -32,6 +33,12 @@ export interface DashboardResponse {
     camera?: CameraData;
   };
   recommendations: {
+    moisture: {
+      current: number;
+      optimal: { min: number; max: number };
+      action: string;
+      status: "good" | "warning" | "critical";
+    };
     temperature: {
       current: number;
       optimal: { min: number; max: number };
