@@ -173,11 +173,11 @@ export function SensorCard({ data }: SensorCardProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {data.illuminance.current.toFixed(0)}
+            {data.illuminance.current.toFixed(0)} lux
           </div>
           <CardDescription className="mt-2">
-            최적 범위: {data.illuminance.optimal.min} ~{" "}
-            {data.illuminance.optimal.max}
+            최적 범위: {data.illuminance.optimal.min} lux ~{" "}
+            {data.illuminance.optimal.max} lux
             <br />
             <span className="text-xs">(낮을수록 밝음, 0-1023)</span>
           </CardDescription>

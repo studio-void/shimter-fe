@@ -18,9 +18,17 @@ interface SerialConnectionProps {
     humidity: number;
     illuminance: number;
   }) => void;
+  onLogReceived?: (
+    type: "info" | "warning" | "error",
+    message: string,
+    priority: "low" | "medium" | "high"
+  ) => void;
 }
 
-export function SerialConnection({ onDataReceived }: SerialConnectionProps) {
+export function SerialConnection({
+  onDataReceived,
+  onLogReceived,
+}: SerialConnectionProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +48,20 @@ export function SerialConnection({ onDataReceived }: SerialConnectionProps) {
       serial.setDataHandler(onDataReceived);
     }
   }, [serial, onDataReceived]);
+
+  useEffect(() => {
+    if (!serial) return;
+    serial.setLogHandler(
+      onLogReceived ??
+        ((() => {
+          /* noop */
+        }) as (
+          type: "info" | "warning" | "error",
+          message: string,
+          priority: "low" | "medium" | "high"
+        ) => void)
+    );
+  }, [serial, onLogReceived]);
 
   const handleConnect = async () => {
     if (!serial) return;
@@ -122,17 +144,22 @@ export function SerialConnection({ onDataReceived }: SerialConnectionProps) {
               {isConnected ? "연결됨" : "연결 안 됨"}
             </Badge>
           </div>
-          {isConnected ? (
-            <Button onClick={handleDisconnect} variant="destructive">
+          <Button
+            onClick={isConnected ? handleDisconnect : handleConnect}
+            disabled={isConnected ? false : isConnecting}
+            variant={isConnected ? "destructive" : "default"}
+          >
+            {isConnected ? (
               <Plug className="h-4 w-4 mr-2" />
-              연결 해제
-            </Button>
-          ) : (
-            <Button onClick={handleConnect} disabled={isConnecting}>
+            ) : (
               <Usb className="h-4 w-4 mr-2" />
-              {isConnecting ? "연결 중..." : "연결하기"}
-            </Button>
-          )}
+            )}
+            {isConnected
+              ? "연결 해제"
+              : isConnecting
+                ? "연결 중..."
+                : "연결하기"}
+          </Button>
         </div>
         {error && (
           <div className="p-3 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-800">

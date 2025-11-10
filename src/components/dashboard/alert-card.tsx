@@ -5,7 +5,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Item,
+  ItemContent,
+  ItemGroup,
+  ItemHeader,
+  ItemTitle,
+} from "@/components/ui/item";
 import { AlertCircle, Info, AlertTriangle } from "lucide-react";
 import type { DashboardResponse } from "@/lib/api";
 
@@ -23,10 +29,6 @@ export function AlertCard({ alerts }: AlertCardProps) {
       default:
         return <Info className="h-4 w-4" />;
     }
-  };
-
-  const getAlertVariant = (type: string): "default" | "destructive" => {
-    return type === "error" ? "destructive" : "default";
   };
 
   if (alerts.length === 0) {
@@ -50,31 +52,35 @@ export function AlertCard({ alerts }: AlertCardProps) {
     <Card>
       <CardHeader>
         <CardTitle>알림 및 권장사항</CardTitle>
-        <CardDescription>딸기 생육 조건에 대한 중요 알림</CardDescription>
+        <CardDescription>선택한 작물 조건과 센서 수신 로그</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {sortedAlerts.map((alert, index) => (
-          <Alert key={index} variant={getAlertVariant(alert.type)}>
-            <div className="flex items-start gap-2">
-              {getAlertIcon(alert.type)}
-              <div className="flex-1">
-                <AlertTitle className="flex items-center gap-2">
-                  {alert.type === "error" && "긴급"}
-                  {alert.type === "warning" && "주의"}
-                  {alert.type === "info" && "정보"}
-                  <span className="text-xs font-normal text-muted-foreground">
-                    ({alert.priority === "high" && "높음"}
-                    {alert.priority === "medium" && "보통"}
-                    {alert.priority === "low" && "낮음"})
-                  </span>
-                </AlertTitle>
-                <AlertDescription className="mt-1">
+      <CardContent>
+        <ItemGroup className="max-h-64 overflow-y-auto pr-1 space-y-2">
+          {sortedAlerts.map((alert, index) => (
+            <Item key={index} variant="outline" className="items-start">
+              <ItemContent>
+                <ItemHeader>
+                  <ItemTitle>
+                    <span className="inline-flex items-center gap-2">
+                      {getAlertIcon(alert.type)}
+                      {alert.type === "error" && "긴급"}
+                      {alert.type === "warning" && "주의"}
+                      {alert.type === "info" && "정보"}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        ({alert.priority === "high" && "높음"}
+                        {alert.priority === "medium" && "보통"}
+                        {alert.priority === "low" && "낮음"})
+                      </span>
+                    </span>
+                  </ItemTitle>
+                </ItemHeader>
+                <div className="text-sm leading-snug text-balance whitespace-pre-wrap">
                   {alert.message}
-                </AlertDescription>
-              </div>
-            </div>
-          </Alert>
-        ))}
+                </div>
+              </ItemContent>
+            </Item>
+          ))}
+        </ItemGroup>
       </CardContent>
     </Card>
   );

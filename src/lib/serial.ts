@@ -15,6 +15,11 @@ export class ArduinoSerial {
     humidity: number; // 습도 (%)
     illuminance: number; // 조도 (0-1023, 낮을수록 밝음)
   }) => void;
+  private onLog?: (
+    type: "info" | "warning" | "error",
+    message: string,
+    priority: "low" | "medium" | "high"
+  ) => void;
 
   async connect(options?: {
     baudRate?: number;
@@ -72,7 +77,10 @@ export class ArduinoSerial {
         throw new Error("시리얼 포트를 읽을 수 없습니다.");
       }
     } catch (error) {
-      console.error("Serial connection error:", error);
+      // 연결 에러를 알림으로 전달
+      if (error instanceof Error) {
+        this.onLog?.("error", `시리얼 연결 실패: ${error.message}`, "medium");
+      }
 
       // 더 자세한 에러 메시지 제공
       if (error instanceof Error) {
@@ -143,8 +151,8 @@ export class ArduinoSerial {
           }
         }
       } catch (error) {
-        if (this.isReading) {
-          console.error("[Serial] ❌ 읽기 에러:", error);
+        if (this.isReading && error instanceof Error) {
+          this.onLog?.("warning", `시리얼 읽기 에러: ${error.message}`, "low");
         }
       } finally {
         try {
@@ -161,9 +169,8 @@ export class ArduinoSerial {
         await new Promise((r) => setTimeout(r, 10));
       }
     }
-    console.log(
-      `[Serial] 🔚 읽기 루프 종료 (isReading=${this.isReading}, total=${this.readCount})`
-    );
+    // 루프 종료 알림
+    this.onLog?.("info", "시리얼 읽기 종료", "low");
   }
 
   private processData(text: string): void {
@@ -204,17 +211,19 @@ export class ArduinoSerial {
               illuminance,
             };
 
-            // 최소 로그: 타임스탬프 + 카운트만 출력
             this.readCount += 1;
-            console.log(
-              `[Serial] ${new Date().toISOString()} (#${this.readCount})`
-            );
 
             this.onDataReceived?.(data);
           }
         }
       } catch (error) {
-        console.error("[Serial] 파싱 에러:", error);
+        if (error instanceof Error) {
+          this.onLog?.(
+            "warning",
+            `시리얼 데이터 파싱 에러: ${error.message}`,
+            "low"
+          );
+        }
       }
     }
   }
@@ -228,6 +237,16 @@ export class ArduinoSerial {
     }) => void
   ): void {
     this.onDataReceived = handler;
+  }
+
+  setLogHandler(
+    handler: (
+      type: "info" | "warning" | "error",
+      message: string,
+      priority: "low" | "medium" | "high"
+    ) => void
+  ): void {
+    this.onLog = handler;
   }
 
   async disconnect(): Promise<void> {

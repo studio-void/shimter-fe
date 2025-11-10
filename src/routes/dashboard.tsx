@@ -1,12 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { SensorCard } from "@/components/dashboard/sensor-card";
 import { WeatherCard } from "@/components/dashboard/weather-card";
 import { AlertCard } from "@/components/dashboard/alert-card";
 import { CameraView } from "@/components/dashboard/camera-view";
 import { BluetoothConnection } from "@/components/dashboard/bluetooth-connection";
 import { SerialConnection } from "@/components/dashboard/serial-connection";
-import { type SensorData } from "@/lib/api";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { type SensorData, type WeatherData } from "@/lib/api";
+import { postAIAnalysis, type AIAnalysisResponse } from "@/lib/ai";
 import {
   Select,
   SelectContent,
@@ -23,6 +31,15 @@ function Dashboard() {
   const [sensorData, setSensorData] = useState<SensorData | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [plant, setPlant] = useState<string>("strawberry");
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [alerts, setAlerts] = useState<
+    Array<{
+      type: "info" | "warning" | "error";
+      message: string;
+      priority: "low" | "medium" | "high";
+    }>
+  >([]);
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResponse | null>(null);
 
   // 작물별 생육 조건 정의 (예시 값)
   const plantConditions = useMemo(
@@ -52,6 +69,20 @@ function Dashboard() {
     []
   );
 
+  const pushAlert = useCallback(
+    (
+      type: "info" | "warning" | "error",
+      message: string,
+      priority: "low" | "medium" | "high" = "low"
+    ) => {
+      setAlerts((prev) => {
+        const next = [{ type, message, priority }, ...prev];
+        return next.slice(0, 50);
+      });
+    },
+    [setAlerts]
+  );
+
   // 센서 데이터 수신 핸들러
   const handleSensorData = useCallback(
     (data: {
@@ -69,8 +100,12 @@ function Dashboard() {
       };
       setSensorData(sensorData);
       setLastUpdate(new Date());
+      const now = new Date();
+      const time = now.toLocaleTimeString("ko-KR", { hour12: false });
+      const msg = `센서 수신 ${time} - 토양 ${data.moisture}% / 온도 ${data.temperature}°C / 습도 ${data.humidity}% / 조도 ${data.illuminance} lux`;
+      pushAlert("info", msg, "low");
     },
-    []
+    [pushAlert]
   );
 
   // 로컬 추천 계산 함수
@@ -82,21 +117,57 @@ function Dashboard() {
       const humidityOptimal = current.humidity;
       const illuminanceOptimal = current.illuminance;
 
-      const statusFromRange = (
-        current: number,
-        range: { min: number; max: number }
+      const makeAdvice = (
+        metric: "moisture" | "temperature" | "humidity" | "illuminance",
+        value: number,
+        range: { min: number; max: number },
+        unit: string
       ): { status: "good" | "warning" | "critical"; action: string } => {
-        if (current >= range.min && current <= range.max) {
-          return { status: "good", action: "현재 값이 적정 범위입니다." };
+        if (value >= range.min && value <= range.max) {
+          return {
+            status: "good",
+            action: `현재 ${value}${unit}로 적정 범위(${range.min}${unit} ~ ${range.max}${unit})입니다.`,
+          };
         }
-        const distance =
-          current < range.min ? range.min - current : current - range.max;
+
+        const diff = value < range.min ? range.min - value : value - range.max;
+        const span = range.max - range.min || 1;
         const severity =
-          distance > (range.max - range.min) * 0.2 ? "critical" : "warning";
-        const direction = current < range.min ? "낮습니다" : "높습니다";
+          diff > span * 0.2 ? ("critical" as const) : ("warning" as const);
+        const dir = value < range.min ? "낮습니다" : "높습니다";
+
+        // 메트릭별 구체 조치
+        let actionDetail = "";
+        switch (metric) {
+          case "moisture":
+            actionDetail =
+              value < range.min
+                ? "화분에 물을 주고, 건조가 심하면 흙을 충분히 적셔주세요."
+                : "과습입니다. 물 주기를 중단하고 배수를 개선하거나 통풍을 늘려주세요.";
+            break;
+          case "temperature":
+            actionDetail =
+              value < range.min
+                ? "보온이 필요합니다. 실내 이동, 보온덮개, 히터 등을 활용하세요."
+                : "온도가 높습니다. 환기/그늘 제공, 직사광선 차단, 냉각을 고려하세요.";
+            break;
+          case "humidity":
+            actionDetail =
+              value < range.min
+                ? "가습이 필요합니다. 분무, 물받침대, 가습기 등을 사용하세요."
+                : "습도가 높습니다. 환기와 제습을 통해 곰팡이 발생을 예방하세요.";
+            break;
+          case "illuminance":
+            actionDetail =
+              value < range.min
+                ? "조도가 낮습니다. 생장 LED를 켜거나 더 밝은 장소로 옮기세요."
+                : "조도가 높습니다. 차광하거나 조명의 거리를 늘려 광해를 줄이세요.";
+            break;
+        }
+
         return {
-          status: severity as "warning" | "critical",
-          action: `값이 ${direction}. 조치가 필요합니다.`,
+          status: severity,
+          action: `현재 ${value}${unit}로 ${dir}. 적정 범위는 ${range.min}${unit} ~ ${range.max}${unit}입니다. ${actionDetail}`,
         };
       };
 
@@ -115,22 +186,32 @@ function Dashboard() {
           moisture: {
             current: data.moisture,
             optimal: moistureOptimal,
-            ...statusFromRange(data.moisture, moistureOptimal),
+            ...makeAdvice("moisture", data.moisture, moistureOptimal, "%"),
           },
           temperature: {
             current: data.temperature,
             optimal: temperatureOptimal,
-            ...statusFromRange(data.temperature, temperatureOptimal),
+            ...makeAdvice(
+              "temperature",
+              data.temperature,
+              temperatureOptimal,
+              "°C"
+            ),
           },
           humidity: {
             current: data.humidity,
             optimal: humidityOptimal,
-            ...statusFromRange(data.humidity, humidityOptimal),
+            ...makeAdvice("humidity", data.humidity, humidityOptimal, "%"),
           },
           illuminance: {
             current: data.illuminance,
             optimal: illuminanceOptimal,
-            ...statusFromRange(data.illuminance, illuminanceOptimal),
+            ...makeAdvice(
+              "illuminance",
+              data.illuminance,
+              illuminanceOptimal,
+              " lux"
+            ),
           },
         },
         alerts: [],
@@ -138,6 +219,59 @@ function Dashboard() {
     },
     [plant, plantConditions]
   );
+
+  const analysisDescriptions: Record<AIAnalysisResponse["class"], string> = {
+    normal: "정상 상태로 판별되었습니다.",
+    "temp-humid": "온도/습도에 이상 징후가 감지되었습니다.",
+    unripe: "덜 익은 개체로 감지되었습니다.",
+    disease_powdery: "흰가루병 병징이 의심됩니다.",
+    disease_intonsa: "잎곰팡이병 병징이 의심됩니다.",
+    disease_latus: "잿빛곰팡이병 병징이 의심됩니다.",
+  };
+
+  // 공공 날씨(Open-Meteo) - 광주과학기술원(첨단동) 현재 날씨 주기 조회
+  const fetchWeather = useCallback(async () => {
+    try {
+      const url =
+        "https://api.open-meteo.com/v1/forecast?latitude=35.2284&longitude=126.842&current=temperature_2m,relative_humidity_2m&hourly=precipitation_probability&forecast_days=1&timezone=Asia%2FSeoul";
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = await res.json();
+      const currentTemp = Number(data?.current?.temperature_2m ?? 0);
+      const currentHumidity = Number(data?.current?.relative_humidity_2m ?? 0);
+      const hourlyTimes: string[] = data?.hourly?.time ?? [];
+      const hourlyProb: number[] =
+        data?.hourly?.precipitation_probability ?? [];
+      let willRain = false;
+      let probability = 0;
+      let expectedTime: string | undefined = undefined;
+      if (Array.isArray(hourlyProb) && hourlyProb.length > 0) {
+        let maxIdx = 0;
+        for (let i = 1; i < hourlyProb.length; i++) {
+          if (hourlyProb[i] > hourlyProb[maxIdx]) maxIdx = i;
+        }
+        probability = Number(hourlyProb[maxIdx] ?? 0);
+        willRain = probability >= 50;
+        expectedTime = hourlyTimes[maxIdx];
+      }
+      const w: WeatherData = {
+        location: "광주과학기술원(첨단동, 광주)",
+        temperature: currentTemp,
+        humidity: currentHumidity,
+        rainForecast: { willRain, probability, expectedTime },
+        timestamp: new Date().toISOString(),
+      };
+      setWeather(w);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    // 초기 즉시 한 번
+    fetchWeather();
+    // 10분마다 갱신
+    const t = setInterval(fetchWeather, 10 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [fetchWeather]);
 
   // 대시보드 데이터 계산 (동기, 깜박임 방지)
   const dashboardData = useMemo(() => {
@@ -153,8 +287,8 @@ function Dashboard() {
             illuminance: 800,
             timestamp: new Date().toISOString(),
           },
-          weather: {
-            location: "서울",
+          weather: weather ?? {
+            location: "광주과학기술원(첨단동, 광주)",
             temperature: 20,
             humidity: 70,
             rainForecast: {
@@ -190,17 +324,61 @@ function Dashboard() {
             status: "good" as const,
           },
         },
-        alerts: [],
+        alerts,
       };
     }
-    return calculateRecommendations(sensorData);
-  }, [sensorData, calculateRecommendations, plant, plantConditions]);
+    const base = calculateRecommendations(sensorData);
+    return {
+      ...base,
+      currentStatus: {
+        ...base.currentStatus,
+        weather:
+          weather ??
+          base.currentStatus.weather ??
+          ({
+            location: "광주과학기술원(첨단동, 광주)",
+            temperature: 0,
+            humidity: 0,
+            rainForecast: { willRain: false, probability: 0 },
+            timestamp: new Date().toISOString(),
+          } as WeatherData),
+      },
+      alerts,
+    };
+  }, [
+    sensorData,
+    calculateRecommendations,
+    plant,
+    plantConditions,
+    weather,
+    alerts,
+  ]);
 
   // refetch 제거: 동기 계산이라 불필요
 
-  const handleCameraCapture = useCallback((_imageData: string) => {
-    // 현재는 백엔드 전송을 하지 않음. 필요 시 저장/미리보기 로직 추가 가능.
-  }, []);
+  const handleCameraCapture = useCallback(
+    (imageData: string) => {
+      const process = async () => {
+        try {
+          pushAlert("info", "AI 분석을 시작합니다.", "low");
+          const blob = await (await fetch(imageData)).blob();
+          const result = await postAIAnalysis(blob);
+          setAiAnalysis(result);
+          pushAlert(
+            "info",
+            `AI 분석 완료: ${result.class} (신뢰도 ${result.confidence})`,
+            "medium"
+          );
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "알 수 없는 오류";
+          pushAlert("error", `AI 분석 실패: ${message}`, "medium");
+        }
+      };
+      void process();
+    },
+    [pushAlert]
+  );
 
   if (!dashboardData) {
     return (
@@ -242,7 +420,12 @@ function Dashboard() {
         {/* 연결 옵션 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <BluetoothConnection onDataReceived={handleSensorData} />
-          <SerialConnection onDataReceived={handleSensorData} />
+          <SerialConnection
+            onDataReceived={handleSensorData}
+            onLogReceived={(type, message, priority) =>
+              pushAlert(type, message, priority)
+            }
+          />
         </div>
 
         {/* 작물 선택 */}
@@ -273,6 +456,37 @@ function Dashboard() {
           <WeatherCard weather={dashboardData.currentStatus.weather} />
           <AlertCard alerts={dashboardData.alerts} />
         </div>
+
+        {/* AI 분석 결과 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>AI 생육 분석</CardTitle>
+            <CardDescription>
+              웹캠으로 촬영한 사진을 기반으로 한 상태 분석 결과
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {aiAnalysis ? (
+              <div className="space-y-2">
+                <div className="text-lg font-semibold">
+                  {aiAnalysis.class}
+                  <span className="ml-2 text-sm text-muted-foreground">
+                    (신뢰도 {aiAnalysis.confidence})
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {analysisDescriptions[aiAnalysis.class] ??
+                    "분석 결과에 대한 설명을 찾을 수 없습니다."}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                아직 분석 결과가 없습니다. 카메라를 시작하고 사진을 캡처하면
+                분석이 진행됩니다.
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* 웹캠 뷰 */}
         <CameraView
