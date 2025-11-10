@@ -15,6 +15,23 @@ interface SensorCardProps {
 }
 
 export function SensorCard({ data }: SensorCardProps) {
+  const normalize = (value: number, min: number, max: number) => {
+    if (max === min) return 0;
+    const pct = ((value - min) / (max - min)) * 100;
+    return Math.max(0, Math.min(100, pct));
+  };
+  const getBarClass = (status: string) => {
+    switch (status) {
+      case "good":
+        return "[&_[data-slot=progress-indicator]]:bg-green-500";
+      case "warning":
+        return "[&_[data-slot=progress-indicator]]:bg-yellow-500";
+      case "critical":
+        return "[&_[data-slot=progress-indicator]]:bg-red-500";
+      default:
+        return "[&_[data-slot=progress-indicator]]:bg-gray-400";
+    }
+  };
   const getStatusColor = (status: string) => {
     switch (status) {
       case "good":
@@ -68,12 +85,8 @@ export function SensorCard({ data }: SensorCardProps) {
               </Badge>
             </div>
             <Progress
-              value={
-                ((data.moisture.current - data.moisture.optimal.min) /
-                  (data.moisture.optimal.max - data.moisture.optimal.min)) *
-                100
-              }
-              className="h-2"
+              value={normalize(data.moisture.current, 0, 100)}
+              className={`h-2 ${getBarClass(data.moisture.status)}`}
             />
             <p className="text-xs text-muted-foreground mt-2">
               {data.moisture.action}
@@ -107,13 +120,8 @@ export function SensorCard({ data }: SensorCardProps) {
               </Badge>
             </div>
             <Progress
-              value={
-                ((data.temperature.current - data.temperature.optimal.min) /
-                  (data.temperature.optimal.max -
-                    data.temperature.optimal.min)) *
-                100
-              }
-              className="h-2"
+              value={normalize(data.temperature.current, -20, 50)}
+              className={`h-2 ${getBarClass(data.temperature.status)}`}
             />
             <p className="text-xs text-muted-foreground mt-2">
               {data.temperature.action}
@@ -147,12 +155,8 @@ export function SensorCard({ data }: SensorCardProps) {
               </Badge>
             </div>
             <Progress
-              value={
-                ((data.humidity.current - data.humidity.optimal.min) /
-                  (data.humidity.optimal.max - data.humidity.optimal.min)) *
-                100
-              }
-              className="h-2"
+              value={normalize(data.humidity.current, 0, 100)}
+              className={`h-2 ${getBarClass(data.humidity.status)}`}
             />
             <p className="text-xs text-muted-foreground mt-2">
               {data.humidity.action}
@@ -188,13 +192,8 @@ export function SensorCard({ data }: SensorCardProps) {
               </Badge>
             </div>
             <Progress
-              value={
-                ((data.illuminance.current - data.illuminance.optimal.min) /
-                  (data.illuminance.optimal.max -
-                    data.illuminance.optimal.min)) *
-                100
-              }
-              className="h-2"
+              value={normalize(data.illuminance.current, 0, 1023)}
+              className={`h-2 ${getBarClass(data.illuminance.status)}`}
             />
             <p className="text-xs text-muted-foreground mt-2">
               {data.illuminance.action}

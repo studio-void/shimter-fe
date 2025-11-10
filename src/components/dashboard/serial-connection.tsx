@@ -20,25 +20,26 @@ interface SerialConnectionProps {
   }) => void;
 }
 
-export function SerialConnection({
-  onDataReceived,
-}: SerialConnectionProps) {
+export function SerialConnection({ onDataReceived }: SerialConnectionProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serial, setSerial] = useState<ArduinoSerial | null>(null);
 
+  // 인스턴스 생성/해제는 한 번만 수행 (StrictMode 재실행 대비)
   useEffect(() => {
     const ser = new ArduinoSerial();
-    if (onDataReceived) {
-      ser.setDataHandler(onDataReceived);
-    }
     setSerial(ser);
+    // 언마운트 시 자동 해제하지 않음 (개발 중 HMR/재마운트에도 연결 유지)
+    return () => {};
+  }, []);
 
-    return () => {
-      ser.disconnect();
-    };
-  }, [onDataReceived]);
+  // 데이터 핸들러는 prop 변경 시에만 갱신
+  useEffect(() => {
+    if (serial && onDataReceived) {
+      serial.setDataHandler(onDataReceived);
+    }
+  }, [serial, onDataReceived]);
 
   const handleConnect = async () => {
     if (!serial) return;
@@ -47,7 +48,8 @@ export function SerialConnection({
     setError(null);
 
     try {
-      await serial.connect();
+      // 1초 간격으로 처리
+      await serial.connect({ readIntervalMs: 1000, baudRate: 38400 });
       setIsConnected(true);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "연결 실패";
@@ -96,15 +98,15 @@ export function SerialConnection({
 
   return (
     <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {isConnected ? (
-              <PlugZap className="h-5 w-5 text-green-500" />
-            ) : (
-              <Usb className="h-5 w-5" />
-            )}
-            아두이노 시리얼 연결
-          </CardTitle>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {isConnected ? (
+            <PlugZap className="h-5 w-5 text-green-500" />
+          ) : (
+            <Usb className="h-5 w-5" />
+          )}
+          아두이노 시리얼 연결
+        </CardTitle>
         <CardDescription>
           USB 케이블로 연결된 아두이노와 시리얼 통신합니다
         </CardDescription>
@@ -149,7 +151,8 @@ export function SerialConnection({
         {!isConnected && (
           <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
             <p className="text-sm text-blue-900 dark:text-blue-100">
-              💡 USB 케이블로 아두이노를 컴퓨터에 연결한 후 연결하기 버튼을 눌러주세요.
+              💡 USB 케이블로 아두이노를 컴퓨터에 연결한 후 연결하기 버튼을
+              눌러주세요.
               <br />
               보드레이트: 38400
             </p>
@@ -159,4 +162,3 @@ export function SerialConnection({
     </Card>
   );
 }
-
