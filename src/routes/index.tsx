@@ -24,43 +24,98 @@ function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center text-white bg-linear-to-br from-brand-dark via-brand to-brand-light">
-        <div className="container mx-auto px-6 py-20">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-6xl md:text-7xl font-bold mb-6 tracking-tight text-white">
-              심터
-            </h1>
-            <p className="text-2xl md:text-3xl mb-8 text-white/90">
-              Personalized smart farm solution
-              <br />
-              that you can learn with us
-            </p>
-            <div className="flex flex-wrap justify-center gap-3 mb-12 text-lg">
-              <span className="px-4 py-2 bg-white/10 rounded-full backdrop-blur-sm">
-                #키우면서_배우는
-              </span>
-              <span className="px-4 py-2 bg-white/10 rounded-full backdrop-blur-sm">
-                #나한테_딱맞는
-              </span>
-              <span className="px-4 py-2 bg-white/10 rounded-full backdrop-blur-sm">
-                #가정용_스마트팜
-              </span>
-              <span className="px-4 py-2 bg-white/10 rounded-full backdrop-blur-sm">
-                #오늘도_성장각
-              </span>
+      <section className="relative overflow-hidden bg-white">
+        <div className="absolute inset-y-0 right-0 hidden h-full w-full max-w-[55vw] lg:block" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(17,119,255,0.08),transparent_60%)]" />
+        <div className="container relative mx-auto px-6 py-24">
+          <div className="grid items-center gap-16 lg:grid-cols-[1fr_minmax(0,420px)]">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-white/80 px-4 py-2 text-sm font-medium text-brand-dark shadow-sm backdrop-blur">
+                <Leaf className="h-4 w-4" />
+                도시형 스마트 가든 플랫폼
+              </div>
+              <h1 className="mt-6 text-4xl font-bold leading-tight text-gray-900 md:text-6xl">
+                심터와 함께
+                <span className="block text-brand-dark">
+                  데이터로 배우는 재배 경험
+                </span>
+              </h1>
+              <p className="mt-6 text-lg text-gray-600 md:text-xl">
+                센서와 AI 분석을 결합한 학습형 스마트팜으로, 사용자 맞춤 재배와
+                교육 경험을 동시에 제공합니다.
+              </p>
+              <div className="mt-10 flex flex-wrap items-center gap-4">
+                <Link to="/dashboard">
+                  <Button
+                    size="lg"
+                    className="text-lg px-8 py-6 text-white bg-brand hover:bg-brand-dark"
+                  >
+                    대시보드 시작하기
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                <div className="flex flex-wrap gap-3 text-sm text-gray-500">
+                  <span className="rounded-full bg-gray-100 px-4 py-2 font-medium">
+                    #키우면서_배우는
+                  </span>
+                  <span className="rounded-full bg-gray-100 px-4 py-2 font-medium">
+                    #맞춤형스마트팜
+                  </span>
+                  <span className="rounded-full bg-gray-100 px-4 py-2 font-medium">
+                    #도시농업혁신
+                  </span>
+                </div>
+              </div>
             </div>
-            <Link to="/dashboard">
-              <Button
-                size="lg"
-                className="text-lg px-8 py-6 bg-white text-brand hover:bg-white/90"
-              >
-                대시보드 시작하기
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
+            <div className="relative rounded-3xl bg-white/90 p-8 shadow-xl ring-1 ring-black/5 backdrop-blur">
+              <div className="absolute inset-x-8 -top-6 z-0 h-24 rounded-3xl bg-brand/10 blur-2xl" />
+              <div className="relative z-10 space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+                    <Thermometer className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      실시간 환경 모니터링
+                    </h3>
+                    <p className="mt-2 text-sm text-gray-600">
+                      온도·습도·조도 데이터를 실시간으로 수집하고 대시보드에
+                      시각화합니다.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+                    <Brain className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      AI 기반 생육 분석
+                    </h3>
+                    <p className="mt-2 text-sm text-gray-600">
+                      촬영된 이미지를 분석해 작물 상태를 진단하고 개선 방향을
+                      제안합니다.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+                    <GraduationCap className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      함께 성장하는 학습 경험
+                    </h3>
+                    <p className="mt-2 text-sm text-gray-600">
+                      데이터 기반 인사이트와 맞춤형 가이드를 통해 재배를 배우고
+                      확장합니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-20 bg-linear-to-t from-white to-transparent" />
       </section>
 
       {/* Background & Motivation Section */}
@@ -352,7 +407,15 @@ function LandingPage() {
           <div className="max-w-4xl mx-auto text-center">
             <p className="text-lg font-semibold mb-2">Powered by VO!D</p>
             <p className="text-gray-400 mb-4">From void, to!</p>
-            <p className="text-sm text-gray-500">www.wevoid.com</p>
+            <p className="text-sm text-gray-500">
+              <a
+                href="https://www.wevoid.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                www.wevoid.com
+              </a>
+            </p>
           </div>
         </div>
       </footer>
